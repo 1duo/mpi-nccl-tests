@@ -1,0 +1,16 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+
+PROJECT(mpi_gpu_direct_test)
+
+FIND_PACKAGE(CUDA REQUIRED)
+FIND_PACKAGE(MPI REQUIRED)
+
+INCLUDE(FindCUDA)
+INCLUDE_DIRECTORIES(/usr/local/cuda/include ${MPI_INCLUDE_PATH})
+
+FILE(GLOB_RECURSE SOURCES "*.cu" "*.cpp" "*.c" "*.h")
+FOREACH(source ${SOURCES})
+  GET_FILENAME_COMPONENT(name ${source} NAME_WE)
+  CUDA_ADD_EXECUTABLE(${name} ${source})
+  TARGET_LINK_LIBRARIES(${name} /usr/local/cuda/lib64/libcudart.so ${MPI_LIBRARIES})
+ENDFOREACH(source)

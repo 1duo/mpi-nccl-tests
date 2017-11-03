@@ -1,2 +1,8 @@
-# mpi-gpu-direct-test
-Simple MPI GPU Direct Test.
+### Simple MPI GPU Direct Test
+
+### Build
+
+```
+mkdir build && cd build
+cmake .. && make
+```
