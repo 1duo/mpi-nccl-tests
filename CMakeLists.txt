@@ -2,8 +2,17 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 PROJECT(mpi_gpu_direct_test)
 
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
 FIND_PACKAGE(CUDA REQUIRED)
 FIND_PACKAGE(MPI REQUIRED)
+
+# ---[ NCCL
+FIND_PACKAGE(NCCL REQUIRED)
+if(NCCL_FOUND)
+  add_definitions(-DUSE_NCCL)
+  include_directories(SYSTEM ${NCCL_INCLUDE_DIR})
+endif()
 
 INCLUDE(FindCUDA)
 INCLUDE_DIRECTORIES(/usr/local/cuda/include ${MPI_INCLUDE_PATH})
@@ -13,4 +22,5 @@ FOREACH(source ${SOURCES})
   GET_FILENAME_COMPONENT(name ${source} NAME_WE)
   CUDA_ADD_EXECUTABLE(${name} ${source})
   TARGET_LINK_LIBRARIES(${name} /usr/local/cuda/lib64/libcudart.so ${MPI_LIBRARIES})
+  TARGET_LINK_LIBRARIES(${name} ${NCCL_LIBRARY})
 ENDFOREACH(source)
