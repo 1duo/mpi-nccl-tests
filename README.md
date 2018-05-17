@@ -1,4 +1,6 @@
-### Simple MPI GPU Direct Test
+### Distributed Optimal Communicators
+
+MPI and NCCL GPU Direct RDMA Tests
 
 ### Build
 
