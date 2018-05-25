@@ -6,34 +6,34 @@
 #include <stdint.h>
 #include <iostream>
 
-#define MPI_CHECK(cmd) do {			\
-    int e = cmd;				\
-    if (e != MPI_SUCCESS) {			\
-      printf("Failed: MPI error %s:%d '%d'\n",	\
-	     __FILE__,__LINE__, e);		\
-      exit(EXIT_FAILURE);			\
-    }						\
-  } while(0)
+#define MPI_CHECK(cmd) do {                      \
+  int e = cmd;                                   \
+  if (e != MPI_SUCCESS) {                        \
+    printf("Failed: MPI error %s:%d '%d'\n",     \
+     __FILE__,__LINE__, e);                      \
+    exit(EXIT_FAILURE);                          \
+  }                                              \
+} while(0)
 
-#define CUDA_CHECK(cmd) do {				\
-    cudaError_t e = cmd;				\
-    if (e != cudaSuccess) {				\
-      printf("Failed: Cuda error %s:%d '%s'\n",		\
-	     __FILE__,__LINE__,cudaGetErrorString(e));	\
-      exit(EXIT_FAILURE);				\
-    }							\
-  } while(0)
+#define CUDA_CHECK(cmd) do {                     \
+  cudaError_t e = cmd;                           \
+  if (e != cudaSuccess) {                        \
+    printf("Failed: CUDA error %s:%d '%s'\n",    \
+     __FILE__,__LINE__,cudaGetErrorString(e));   \
+    exit(EXIT_FAILURE);                          \
+  }                                              \
+} while(0)
 
-#define NCCL_CHECK(cmd) do {				\
-    ncclResult_t r = cmd;				\
-    if (r != ncclSuccess) {				\
-      printf("Failed, NCCL error %s:%d '%s'\n",		\
-	     __FILE__,__LINE__,ncclGetErrorString(r));	\
-      exit(EXIT_FAILURE);				\
-    }							\
-  } while(0)
+#define NCCL_CHECK(cmd) do {                     \
+  ncclResult_t r = cmd;                          \
+  if (r != ncclSuccess) {                        \
+    printf("Failed, NCCL error %s:%d '%s'\n",    \
+     __FILE__,__LINE__,ncclGetErrorString(r));   \
+    exit(EXIT_FAILURE);                          \
+  }                                              \
+} while(0)
 
-static uint64_t getHostHash(const char* string) {
+static uint64_t getHostHash(const char *string) {
   // based on DJB2, result = result * 33 + char
   uint64_t result = 5381;
   for (int c = 0; string[c] != '\0'; c++) {
@@ -42,7 +42,7 @@ static uint64_t getHostHash(const char* string) {
   return result;
 }
 
-static void getHostName(char* hostname, int maxlen) {
+static void getHostName(char *hostname, int maxlen) {
   gethostname(hostname, maxlen);
   for (int i = 0; i < maxlen; i++) {
     if (hostname[i] == '.') {
@@ -52,7 +52,7 @@ static void getHostName(char* hostname, int maxlen) {
   }
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
 
   int size = 256 * 1024 * 1024; // 1GB data
   int myRank, nRanks, localRank = 0;
@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
   getHostName(hostname, 1024);
   hostHashs[myRank] = getHostHash(hostname);
   MPI_CHECK(MPI_Allgather(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, hostHashs,
-			  sizeof(uint64_t), MPI_BYTE, MPI_COMM_WORLD));
+                          sizeof(uint64_t), MPI_BYTE, MPI_COMM_WORLD));
   for (int p = 0; p < nRanks; p++) {
     if (p == myRank) {
       break;
@@ -87,7 +87,7 @@ int main(int argc, char* argv[]) {
   if (myRank == 0) {
     ncclGetUniqueId(&id);
   }
-  MPI_CHECK(MPI_Bcast((void * )&id, sizeof(id), MPI_BYTE, 0, MPI_COMM_WORLD));
+  MPI_CHECK(MPI_Bcast((void *) &id, sizeof(id), MPI_BYTE, 0, MPI_COMM_WORLD));
 
   // picking a GPU based on localRank, allocate device buffers
   std::cout << "Picking Device: " << localRank << " for MPI Rank: " << myRank
@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
   std::cout << "Init NCCL for Rank: " << myRank << "/" << nRanks << std::endl;
   NCCL_CHECK(ncclCommInitRank(&comm, nRanks, id, myRank));
 
-  float* tmpCpu = (float*)malloc(10 * sizeof(float));
+  float *tmpCpu = (float *) malloc(10 * sizeof(float));
 
   // communicating using NCCL
   for (int i = 0; i < 1; ++i) {
@@ -113,24 +113,26 @@ int main(int argc, char* argv[]) {
     ///////////////////////////
     cudaMemcpy(tmpCpu, sendbuff, 10 * sizeof(float), cudaMemcpyDeviceToHost);
     for (int j = 1; j < 5; ++j) {
-      std::cout << "BEFORE ALLREDUCE MPI RANK " << myRank << ", INDEX " << j << ": " << static_cast<float>(*(tmpCpu + j)) << std::endl;
+      std::cout << "BEFORE ALLREDUCE MPI RANK " << myRank << ", INDEX " << j << ": "
+                << static_cast<float>(*(tmpCpu + j)) << std::endl;
     }
     ///////////////////////////
 
     if (myRank == 0) {
-      NCCL_CHECK(ncclAllReduce((const void* )sendbuff, (void* )recvbuff, size,
-			       ncclFloat, ncclSum, comm, s0));
+      NCCL_CHECK(ncclAllReduce((const void *) sendbuff, (void *) recvbuff, size,
+                               ncclFloat, ncclSum, comm, s0));
       CUDA_CHECK(cudaStreamSynchronize(s0));
     } else {
-      NCCL_CHECK(ncclAllReduce((const void* )sendbuff, (void* )recvbuff, size,
-			       ncclFloat, ncclSum, comm, s1));
+      NCCL_CHECK(ncclAllReduce((const void *) sendbuff, (void *) recvbuff, size,
+                               ncclFloat, ncclSum, comm, s1));
       CUDA_CHECK(cudaStreamSynchronize(s1));
     }
 
     ///////////////////////////
     cudaMemcpy(tmpCpu, recvbuff, 10 * sizeof(float), cudaMemcpyDeviceToHost);
     for (int j = 1; j < 5; ++j) {
-      std::cout << "AFTER ALLREDUCE MPI RANK " << myRank << ", INDEX " << j << ": " << static_cast<float>(*(tmpCpu + j)) << std::endl;
+      std::cout << "AFTER ALLREDUCE MPI RANK " << myRank << ", INDEX " << j << ": " << static_cast<float>(*(tmpCpu + j))
+                << std::endl;
     }
     ///////////////////////////
   }

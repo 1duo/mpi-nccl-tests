@@ -9,34 +9,34 @@
 #include <thread>
 #include <chrono>
 
-#define MPI_CHECK(cmd) do {			\
-    int e = cmd;				\
-    if (e != MPI_SUCCESS) {			\
-      printf("Failed: MPI error %s:%d '%d'\n",	\
-	     __FILE__,__LINE__, e);		\
-      exit(EXIT_FAILURE);			\
-    }						\
-  } while(0)
+#define MPI_CHECK(cmd) do {                      \
+  int e = cmd;                                   \
+  if (e != MPI_SUCCESS) {                        \
+    printf("Failed: MPI error %s:%d '%d'\n",     \
+     __FILE__,__LINE__, e);                      \
+    exit(EXIT_FAILURE);                          \
+  }                                              \
+} while(0)
 
-#define CUDA_CHECK(cmd) do {				\
-    cudaError_t e = cmd;				\
-    if (e != cudaSuccess) {				\
-      printf("Failed: Cuda error %s:%d '%s'\n",		\
-	     __FILE__,__LINE__,cudaGetErrorString(e));	\
-      exit(EXIT_FAILURE);				\
-    }							\
-  } while(0)
+#define CUDA_CHECK(cmd) do {                     \
+  cudaError_t e = cmd;                           \
+  if (e != cudaSuccess) {                        \
+    printf("Failed: CUDA error %s:%d '%s'\n",    \
+     __FILE__,__LINE__,cudaGetErrorString(e));   \
+    exit(EXIT_FAILURE);                          \
+  }                                              \
+} while(0)
 
-#define NCCL_CHECK(cmd) do {				\
-    ncclResult_t r = cmd;				\
-    if (r != ncclSuccess) {				\
-      printf("Failed, NCCL error %s:%d '%s'\n",		\
-	     __FILE__,__LINE__,ncclGetErrorString(r));	\
-      exit(EXIT_FAILURE);				\
-    }							\
-  } while(0)
+#define NCCL_CHECK(cmd) do {                     \
+  ncclResult_t r = cmd;                          \
+  if (r != ncclSuccess) {                        \
+    printf("Failed, NCCL error %s:%d '%s'\n",    \
+     __FILE__,__LINE__,ncclGetErrorString(r));   \
+    exit(EXIT_FAILURE);                          \
+  }                                              \
+} while(0)
 
-static uint64_t getHostHash(const char* string) {
+static uint64_t getHostHash(const char *string) {
   // based on DJB2, result = result * 33 + char
   uint64_t result = 5381;
   for (int c = 0; string[c] != '\0'; c++) {
@@ -45,7 +45,7 @@ static uint64_t getHostHash(const char* string) {
   return result;
 }
 
-static void getHostName(char* hostname, int maxlen) {
+static void getHostName(char *hostname, int maxlen) {
   gethostname(hostname, maxlen);
   for (int i = 0; i < maxlen; i++) {
     if (hostname[i] == '.') {
@@ -55,27 +55,29 @@ static void getHostName(char* hostname, int maxlen) {
   }
 }
 
-void runAllReduce(int myRank, int typeId, size_t count, void* sendbuff, void* recvbuff, ncclComm_t comm, cudaStream_t stream) {
+void runAllReduce(int myRank, int typeId, size_t count, void *sendbuff, void *recvbuff, ncclComm_t comm,
+                  cudaStream_t stream) {
   const std::string dataType = typeId == 0 ? "float16" : "float32";
   std::cout << dataType << " Rank " << myRank << " before ncclAllReduce" << std::endl;
   switch (typeId) {
-  case 0:
-    NCCL_CHECK(ncclAllReduce((const void*)sendbuff, (void*)recvbuff, count,
-			     ncclHalf, ncclSum, comm, stream));
-    break;
-  case 1:
-    NCCL_CHECK(ncclAllReduce((const void*)sendbuff, (void*)recvbuff, count,
-			     ncclFloat, ncclSum, comm, stream));
-    break;
-  default:
-    std::cout << "Wrong data type" << std::endl;
+    case 0:
+      NCCL_CHECK(ncclAllReduce((const void *) sendbuff, (void *) recvbuff, count,
+                               ncclHalf, ncclSum, comm, stream));
+      break;
+    case 1:
+      NCCL_CHECK(ncclAllReduce((const void *) sendbuff, (void *) recvbuff, count,
+                               ncclFloat, ncclSum, comm, stream));
+      break;
+    default:
+      std::cout << "Wrong data type" << std::endl;
   }
   std::cout << dataType << " Rank " << myRank << " before stream sync" << std::endl;
   CUDA_CHECK(cudaStreamSynchronize(stream));
   std::cout << dataType << " Rank " << myRank << " finish stream sync" << std::endl;
 }
 
-void delayRunAllReduce(int myRank, int typeId, size_t count, void* sendbuff, void* recvbuff, ncclComm_t comm, cudaStream_t stream) {
+void delayRunAllReduce(int myRank, int typeId, size_t count, void *sendbuff, void *recvbuff, ncclComm_t comm,
+                       cudaStream_t stream) {
   for (int i = 0; i < 5 + typeId; ++i) {
     // std::cout << "Sleep [" << i << "] ..." << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -83,7 +85,7 @@ void delayRunAllReduce(int myRank, int typeId, size_t count, void* sendbuff, voi
   runAllReduce(myRank, typeId, count, sendbuff, recvbuff, comm, stream);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
 
   int size = 256 * 1024 * 1024; // 1GB data
   int myRank, nRanks, localRank = 0;
@@ -99,7 +101,7 @@ int main(int argc, char* argv[]) {
   getHostName(hostname, 1024);
   hostHashs[myRank] = getHostHash(hostname);
   MPI_CHECK(MPI_Allgather(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, hostHashs,
-			  sizeof(uint64_t), MPI_BYTE, MPI_COMM_WORLD));
+                          sizeof(uint64_t), MPI_BYTE, MPI_COMM_WORLD));
   for (int p = 0; p < nRanks; p++) {
     if (p == myRank) {
       break;
@@ -112,7 +114,7 @@ int main(int argc, char* argv[]) {
   ncclUniqueId id[2];
   ncclComm_t comm[2];
   float *sendbuff32, *recvbuff32;
-  half  *sendbuff16, *recvbuff16;
+  half *sendbuff16, *recvbuff16;
   cudaStream_t stream[2];
 
   // get NCCL unique ID at rank 0 and broadcast it to all others
@@ -120,8 +122,8 @@ int main(int argc, char* argv[]) {
     ncclGetUniqueId(&id[0]);
     ncclGetUniqueId(&id[1]);
   }
-  MPI_CHECK(MPI_Bcast((void *)&id[0], sizeof(id[0]), MPI_BYTE, 0, MPI_COMM_WORLD));
-  MPI_CHECK(MPI_Bcast((void *)&id[1], sizeof(id[1]), MPI_BYTE, 0, MPI_COMM_WORLD));
+  MPI_CHECK(MPI_Bcast((void *) &id[0], sizeof(id[0]), MPI_BYTE, 0, MPI_COMM_WORLD));
+  MPI_CHECK(MPI_Bcast((void *) &id[1], sizeof(id[1]), MPI_BYTE, 0, MPI_COMM_WORLD));
 
   // picking a GPU based on localRank, allocate device buffers
   std::cout << "Picking Device: " << localRank << " for MPI Rank: " << myRank
@@ -142,8 +144,8 @@ int main(int argc, char* argv[]) {
   NCCL_CHECK(ncclCommInitRank(&comm[0], nRanks, id[0], myRank));
   NCCL_CHECK(ncclCommInitRank(&comm[1], nRanks, id[1], myRank));
 
-  float* tmpCpu32 = (float*)malloc(10 * sizeof(float));
-  half*  tmpCpu16 = (half*)malloc(10 * sizeof(half));
+  float *tmpCpu32 = (float *) malloc(10 * sizeof(float));
+  half *tmpCpu16 = (half *) malloc(10 * sizeof(half));
 
   // communicating using NCCL
   for (int i = 0; i < 1; ++i) {
