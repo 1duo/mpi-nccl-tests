@@ -1,6 +1,4 @@
-### Distributed Optimal Communicators
-
-MPI and NCCL GPU Direct RDMA Tests
+### MPI and NCCL GPU Direct RDMA Tests
 
 ### Build
 
