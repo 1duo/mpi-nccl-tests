@@ -2,11 +2,11 @@
 
 MPI_EXE=mpirun
 
-$MPI_EXE -np 2 -host 192.168.56.133,192.168.56.134 \
+$MPI_EXE -np 2 -host 192.168.0.131,192.168.0.132 \
     -mca btl_openib_warn_default_gid_prefix 0 \
     -mca btl_openib_want_cuda_gdr 1 \
-    --mca btl_tcp_if_include ib0 \
-    build/nccl-two-communicators-diff-types-with-threads
+    --mca btl_tcp_if_include enp5s0 \
+    cmake-build-debug/experiments/nccl-two-communicators-diff-types-with-threads
 
 exit
 

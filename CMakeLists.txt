@@ -1,26 +1,26 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8)
 
-PROJECT(mpi_gpu_direct_test)
+project(mpi_gpu_direct_test)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-FIND_PACKAGE(CUDA REQUIRED)
-FIND_PACKAGE(MPI REQUIRED)
+find_package(CUDA REQUIRED)
+find_package(MPI REQUIRED)
 
 # ---[ Flags
-if(UNIX OR APPLE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -std=c++11")
-endif()
+if (UNIX OR APPLE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -std=c++11")
+endif ()
 
 # ---[ NCCL
-FIND_PACKAGE(NCCL REQUIRED)
-if(NCCL_FOUND)
-  add_definitions(-DUSE_NCCL)
-  include_directories(SYSTEM ${NCCL_INCLUDE_DIR})
-endif()
+find_package(NCCL REQUIRED)
+if (NCCL_FOUND)
+    add_definitions(-DUSE_NCCL)
+    include_directories(SYSTEM ${NCCL_INCLUDE_DIR})
+endif ()
 
-INCLUDE(FindCUDA)
-INCLUDE_DIRECTORIES(/usr/local/cuda/include ${MPI_INCLUDE_PATH})
+include(FindCUDA)
+include_directories(/usr/local/cuda/include ${MPI_INCLUDE_PATH})
 
-ADD_SUBDIRECTORY(experiments)
-ADD_SUBDIRECTORY(benchmark)
+add_subdirectory(experiments)
+add_subdirectory(benchmark)
